@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Get My Location</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    #btn { padding: 10px 20px; font-size: 16px; border: none; background: #4285F4; color: white; border-radius: 5px; cursor: pointer; }
+    #btn:hover { background: #3367D6; }
+    #output { margin-top: 20px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <button id="btn" onclick="getLocation()">Use My Current Location</button>
+  <p id="output"></p>
+
+  <script>
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+      } else {
+        document.getElementById("output").innerHTML = "Geolocation not supported.";
+      }
+    }
+
+    function showPosition(position) {
+      let lat = position.coords.latitude;
+      let lng = position.coords.longitude;
+      document.getElementById("output").innerHTML =
+        "Latitude: " + lat + "<br>Longitude: " + lng;
+    }
+
+    function showError(error) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          document.getElementById("output").innerHTML = "User denied location request.";
+          break;
+        case error.POSITION_UNAVAILABLE:
+          document.getElementById("output").innerHTML = "Location unavailable.";
+          break;
+        case error.TIMEOUT:
+          document.getElementById("output").innerHTML = "Request timed out.";
+          break;
+        default:
+          document.getElementById("output").innerHTML = "Unknown error.";
+      }
+    }
+  </script>
+</body>
+</html>
