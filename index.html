@@ -8,11 +8,16 @@
     #btn { padding: 10px 20px; font-size: 16px; border: none; background: #4285F4; color: white; border-radius: 5px; cursor: pointer; }
     #btn:hover { background: #3367D6; }
     #output { margin-top: 20px; font-size: 18px; }
+    .coords { font-weight: bold; color: #333; }
   </style>
 </head>
 <body>
   <button id="btn" onclick="getLocation()">Use My Current Location</button>
-  <p id="output"></p>
+  
+  <p id="output">
+    Latitude: <span id="lat" class="coords">-</span><br>
+    Longitude: <span id="lng" class="coords">-</span>
+  </p>
 
   <script>
     function getLocation() {
@@ -26,8 +31,10 @@
     function showPosition(position) {
       let lat = position.coords.latitude;
       let lng = position.coords.longitude;
-      document.getElementById("output").innerHTML =
-        "Latitude: " + lat + "<br>Longitude: " + lng;
+
+      // Update the HTML spans with new values
+      document.getElementById("lat").textContent = lat;
+      document.getElementById("lng").textContent = lng;
     }
 
     function showError(error) {
