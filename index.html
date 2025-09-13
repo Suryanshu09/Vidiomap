@@ -1,119 +1,256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vidiomap</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f9; }
-    .bar-container { display: flex; align-items: center; margin-bottom: 10px; }
-    input { padding: 10px; margin-right: 5px; border: 1px solid #ccc; border-radius: 5px; flex: 1; }
-    button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; background: #007bff; color: white; margin-right: 5px; }
-    button:hover { background: #0056b3; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vidiomap</title>
+<style>
+/* ---------- General ---------- */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f2f4f8;
+  margin: 0;
+  padding: 0;
+}
+.container {
+  max-width: 700px;
+  margin: 40px auto;
+  background: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+/* ---------- Header ---------- */
+h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 25px;
+}
+
+/* ---------- Bars ---------- */
+.bar-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+input {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus {
+  border-color: #007BFF;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 15px;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.clear-btn {
+  background: #dc3545;
+  color: white;
+}
+.clear-btn:hover { background: #c12f39; }
+
+.swap-btn {
+  background: #007BFF;
+  color: white;
+}
+.swap-btn:hover { background: #0056b3; }
+
+.search-btn {
+  width: 100%;
+  background: #28a745;
+  color: white;
+  margin-top: 10px;
+  padding: 15px;
+}
+.search-btn:hover { background: #218838; }
+
+.location-btn {
+  background: #17a2b8;
+  color: white;
+  width: 100%;
+  margin-bottom: 10px;
+}
+.location-btn:hover { background: #117a8b; }
+
+/* ---------- Suggestions ---------- */
+.suggestions {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  z-index: 10;
+  max-height: 180px;
+  overflow-y: auto;
+  width: calc(100% - 10px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.suggestion-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover { background: #f0f8ff; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 480px){
+  .container {
+    margin: 20px 10px;
+    padding: 15px;
+  }
+  button, input { padding: 10px; font-size: 14px; }
+}
+</style>
 </head>
 <body>
-  <h1>Vidiomap</h1>
-  <div class="bar-container">
-    <input type="text" id="fromInput" placeholder="From">
-    <button onclick="useCurrentLocation()">📍 Use My Location</button>
-    <button onclick="clearInput('fromInput')">❌</button>
-  </div>
-  <div class="bar-container">
-    <input type="text" id="toInput" placeholder="To">
-    <button onclick="clearInput('toInput')">❌</button>
-  </div>
-  <div class="bar-container">
-    <button onclick="swapInputs()">⇄ Swap</button>
-    <button onclick="searchVideo()">🔍 Search</button>
-  </div>
+<div class="container">
+<h2>Vidiomap</h2>
 
-  <script>
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzSZbFcJxbeLsf42tR9I318JOG5vCfGsqgUXCPpsZh9tGyR8RgyBaunRzIWL3vmfLLH/exec";
-    let places = [];
-    let allData = [];
+<div class="bar-container">
+<input id="fromBar" placeholder="From">
+<button class="clear-btn" onclick="clearInput('fromBar')">×</button>
+<button class="swap-btn" onclick="swapFromTo()">⇄</button>
+<ul id="fromSuggestions" class="suggestions"></ul>
+</div>
 
-    // Fetch place suggestions
-    async function loadData() {
-      const res = await fetch(BACKEND_URL);
-      const json = await res.json();
-      allData = json.data;
-      places = [...new Set(allData.map(item => item.place_name))];
-      setAutoComplete("fromInput", places);
-      setAutoComplete("toInput", places);
-    }
+<div class="bar-container">
+<input id="toBar" placeholder="To">
+<button class="clear-btn" onclick="clearInput('toBar')">×</button>
+<ul id="toSuggestions" class="suggestions"></ul>
+</div>
 
-    // Autocomplete suggestions
-    function setAutoComplete(id, arr) {
-      const input = document.getElementById(id);
-      input.addEventListener("input", function() {
-        const list = arr.filter(p => p.toLowerCase().includes(this.value.toLowerCase()));
-        this.setAttribute("list", id + "-list");
-        let datalist = document.getElementById(id + "-list");
-        if (!datalist) {
-          datalist = document.createElement("datalist");
-          datalist.id = id + "-list";
-          document.body.appendChild(datalist);
-        }
-        datalist.innerHTML = list.map(p => <option value="${p}">).join("");
+<button class="location-btn" onclick="useMyLocation()">Use My Location</button>
+<button class="search-btn" onclick="searchVideo()">Search</button>
+</div>
+
+<script>
+const appUrl = "YOUR_APPS_SCRIPT_URL_HERE"; // Replace with your Apps Script URL
+let sheetData = [];
+let currentFromPlace = null;
+
+// Fetch Google Sheet Data
+fetch(appUrl + "?suggest=1")
+.then(res => res.json())
+.then(data => sheetData = data)
+.catch(()=>alert("Unable to fetch data from Google Sheet"));
+
+// ---------- Utility Functions ----------
+function clearInput(id){
+  document.getElementById(id).value = '';
+  if(id === 'fromBar') currentFromPlace = null;
+}
+
+function swapFromTo(){
+  const from = document.getElementById('fromBar').value;
+  const to = document.getElementById('toBar').value;
+  document.getElementById('fromBar').value = to;
+  document.getElementById('toBar').value = from;
+  document.getElementById('fromSuggestions').innerHTML='';
+  document.getElementById('toSuggestions').innerHTML='';
+  currentFromPlace = null;
+}
+
+function useMyLocation(){
+  if(!navigator.geolocation){ alert("Geolocation not supported"); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    let nearest = null, minDist = Infinity;
+    sheetData.forEach(d=>{
+      if(d.latitude && d.longitude){
+        const dist = Math.hypot(d.latitude - lat, d.longitude - lng);
+        if(dist < minDist){ minDist = dist; nearest = d.place_name; }
+      }
+    });
+    if(nearest){
+      document.getElementById('fromBar').value = "Current Location";
+      currentFromPlace = nearest;
+    } else alert("No nearby place found in sheet");
+  }, ()=>alert("Permission denied or unable to fetch location"));
+}
+
+// ---------- Suggestions ----------
+function setupSuggestions(inputId, listId){
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  input.addEventListener('input', ()=>{
+    const val = input.value.toLowerCase();
+    list.innerHTML = '';
+    if(!val) return;
+    [...new Set(sheetData.map(d=>d.place_name))]
+      .filter(n=>n.toLowerCase().includes(val))
+      .forEach(n=>{
+        const li = document.createElement('li');
+        li.textContent = n;
+        li.className = 'suggestion-item';
+        li.onclick = ()=>{
+          input.value = n;
+          list.innerHTML = '';
+          if(inputId==='fromBar') currentFromPlace=null;
+        };
+        list.appendChild(li);
       });
-    }
+  });
+  document.addEventListener('click', e=>{
+    if(!input.contains(e.target) && !list.contains(e.target)) list.innerHTML='';
+  });
+}
+setupSuggestions('fromBar','fromSuggestions');
+setupSuggestions('toBar','toSuggestions');
 
-    // Use current location
-    function useCurrentLocation() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const lat = pos.coords.latitude.toFixed(5);
-          const lon = pos.coords.longitude.toFixed(5);
-          document.getElementById("fromInput").value = Current Location (${lat}, ${lon});
-        }, () => alert("Unable to fetch location"));
-      } else {
-        alert("Geolocation not supported");
-      }
-    }
+// Normalize Drive Link
+function normalizeUrl(url){
+  if(!url) return "";
+  if(url.includes("drive.google.com") && url.includes("/view"))
+    return url.replace("/view","/preview");
+  return url;
+}
 
-    // Clear input
-    function clearInput(id) {
-      document.getElementById(id).value = "";
-    }
+// ---------- Search ----------
+function searchVideo(){
+  const fromVal = document.getElementById('fromBar').value.trim();
+  const toVal = document.getElementById('toBar').value.trim();
+  if(!fromVal || !toVal){ alert("Fill both fields"); return; }
 
-    // Swap
-    function swapInputs() {
-      const from = document.getElementById("fromInput").value;
-      const to = document.getElementById("toInput").value;
-      document.getElementById("fromInput").value = to;
-      document.getElementById("toInput").value = from;
-    }
+  const fromPlace = (fromVal === "Current Location" && currentFromPlace) ? currentFromPlace : fromVal;
+  const startRow = sheetData.find(d => d.place_name === fromPlace);
+  const endRow = sheetData.find(d => d.place_name === toVal);
 
-    // Search
-    function searchVideo() {
-      const from = document.getElementById("fromInput").value.trim();
-      const to = document.getElementById("toInput").value.trim();
+  if(!startRow || !endRow){ alert("No matching route found"); return; }
 
-      if (!from || !to) {
-        alert("Please fill both From and To fields (unless using Current Location)");
-        return;
-      }
+  const videoUrl = normalizeUrl(startRow.video_link);
+  const startTime = Number(startRow.timestamp) || 0;
+  const endTime = Number(endRow.timestamp) || 0;
 
-      // If From is current location → match only To
-      let results;
-      if (from.startsWith("Current Location")) {
-        results = allData.filter(item => item.place_name === to);
-      } else {
-        results = allData.filter(item => item.place_name === from || item.place_name === to);
-      }
-
-      if (results.length === 0) {
-        alert("No matching video found.");
-        return;
-      }
-
-      const first = results[0];
-      const url = video.html?video=${encodeURIComponent(first.video_link)}&time=${encodeURIComponent(first.timestamp)}&desc=${encodeURIComponent(first.description)};
-      window.location.href = url;
-    }
-
-    loadData();
-  </script>
+  // Open new page for video
+  const win = window.open("", "_blank");
+  win.document.write(`
+    <div style="text-align:center; margin-top:30px;">
+      <h2>${fromPlace} → ${toVal}</h2>
+      <iframe src="${videoUrl}#t=${startTime}" width="800" height="450" frameborder="0" allowfullscreen></iframe>
+      <p>Start: ${startTime}s | End: ${endTime}s</p>
+      <p>${startRow.description || ""}</p>
+    </div>
+  `);
+}
+</script>
 </body>
 </html>
